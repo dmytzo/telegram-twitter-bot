@@ -54,7 +54,8 @@ func main() {
 	// Heroku прокидывает порт для приложения в переменную окружения PORT
 	port := os.Getenv("PORT")
 	token := os.Getenv("token")
-	bot, err := tgbotapi.NewBotAPI(token)
+	log.Println(token)
+	bot, err := tgbotapi.NewBotAPI("899522595:AAGRUpcsxiX-TI0-mlCOVlilmJYzR8Db9mo")
 	if err != nil {
 		log.Fatal(err)
 	}
