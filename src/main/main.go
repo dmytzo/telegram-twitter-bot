@@ -1,94 +1,106 @@
 package main
 
 import (
-	"encoding/json"
+	"github.com/dghubble/go-twitter/twitter"
+	"github.com/dghubble/oauth1"
 	"gopkg.in/telegram-bot-api.v4"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 )
 
-// для вендоринга используется GB
-// сборка проекта осуществляется с помощью gb build
-// установка зависимостей - gb vendor fetch gopkg.in/telegram-bot-api.v4
-// установка зависимостей из манифеста - gb vendor restore
 
-type Joke struct {
-	ID   uint32 `json:"id"`
-	Joke string `json:"joke"`
+
+
+var port = os.Getenv("PORT")
+var cKey = os.Getenv("cKey")
+var cSecret = os.Getenv("cSecret")
+var t = os.Getenv("t")
+var tSecret = os.Getenv("tSecret")
+var botApi = os.Getenv("botApi")
+var WebHookURL = os.Getenv("webHookUrl")
+
+func setUpTwitterClient() *twitter.Client {
+	config := oauth1.NewConfig(cKey, cSecret)
+	token := oauth1.NewToken(t, tSecret)
+	httpClient := config.Client(oauth1.NoContext, token)
+	client := twitter.NewClient(httpClient)
+	return client
 }
 
-type JokeResponse struct {
-	Type  string `json:"type"`
-	Value Joke   `json:"value"`
-}
-
-var buttons = []tgbotapi.KeyboardButton{
-	tgbotapi.KeyboardButton{Text: "Get Joke"},
-}
-
-// При старте приложения, оно скажет телеграму ходить с обновлениями по этому URL
-const WebhookURL = "https://go-court-bot.herokuapp.com"
-
-func getJoke() string {
-	c := http.Client{}
-	resp, err := c.Get("http://api.icndb.com/jokes/random?limitTo=[nerdy]")
-	if err != nil {
-		return "jokes API not responding"
-	}
-
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	joke := JokeResponse{}
-
-	err = json.Unmarshal(body, &joke)
-	if err != nil {
-		return "Joke error"
-	}
-
-	return joke.Value.Joke
-}
-
-func main() {
-	// Heroku прокидывает порт для приложения в переменную окружения PORT
-	port := os.Getenv("PORT")
-	token := os.Getenv("token")
-	log.Println(token)
-	bot, err := tgbotapi.NewBotAPI("899522595:AAGRUpcsxiX-TI0-mlCOVlilmJYzR8Db9mo")
+func setUpTelegramBot() *tgbotapi.BotAPI{
+	bot, err := tgbotapi.NewBotAPI(botApi)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	bot.Debug = true
 
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-
-	// Устанавливаем вебхук
-	_, err = bot.SetWebhook(tgbotapi.NewWebhook(WebhookURL))
+	_, err = bot.SetWebhook(tgbotapi.NewWebhook(WebHookURL))
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	return bot
+}
+
+func main() {
+
+	searchButtons := []tgbotapi.KeyboardButton{
+		tgbotapi.KeyboardButton{Text: "Search in Twitter"},
+	}
+
+	searchOptions := map[string]bool{
+		"Search in Twitter": false,
+	}
+
+	twitterClient := setUpTwitterClient()
+	bot := setUpTelegramBot()
+
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
 	updates := bot.ListenForWebhook("/")
 	go http.ListenAndServe(":"+port, nil)
 
-	// получаем все обновления из канала updates
 	for update := range updates {
 		var message tgbotapi.MessageConfig
-		log.Println("received text: ", update.Message.Text)
+		msg := update.Message.Text
 
-		switch update.Message.Text {
-		case "Get Joke":
-			// Если пользователь нажал на кнопку, то придёт сообщение "Get Joke"
-			message = tgbotapi.NewMessage(update.Message.Chat.ID, getJoke())
+		switch msg {
+
+		case "Search in Twitter":
+			message = tgbotapi.NewMessage(update.Message.Chat.ID, "<Type keyword to search>")
+			message.ReplyMarkup = tgbotapi.NewReplyKeyboard(searchButtons)
+			bot.Send(message)
+
+			searchOptions["Search in Twitter"] = true
+
 		default:
-			message = tgbotapi.NewMessage(update.Message.Chat.ID, `Press "Get Joke" to receive joke`)
+
+			if searchOptions["Search in Twitter"] {
+				query := update.Message.Text
+				search, _, _ := twitterClient.Search.Tweets(&twitter.SearchTweetParams{
+					Query: query, Count: 10, ResultType: "recent",
+				})
+
+				if search != nil {
+					message = tgbotapi.NewMessage(update.Message.Chat.ID, "********** \n RESULTS: \n**********")
+					message.ReplyMarkup = tgbotapi.NewReplyKeyboard(searchButtons)
+					bot.Send(message)
+
+					for _, tweet := range search.Statuses {
+						message = tgbotapi.NewMessage(update.Message.Chat.ID, "Text: " + tweet.Text + "\n" + " Link: https://twitter.com/statuses/" + tweet.IDStr)
+						message.ReplyMarkup = tgbotapi.NewReplyKeyboard(searchButtons)
+						bot.Send(message)
+					}
+				}
+				searchOptions["Search in Twitter"] = false
+
+			} else {
+				message = tgbotapi.NewMessage(update.Message.Chat.ID, "Press button to search")
+				message.ReplyMarkup = tgbotapi.NewReplyKeyboard(searchButtons)
+				bot.Send(message)
+			}
 		}
-
-		// В ответном сообщении просим показать клавиатуру
-		message.ReplyMarkup = tgbotapi.NewReplyKeyboard(buttons)
-
-		bot.Send(message)
 	}
 }

@@ -2,6 +2,38 @@
 	"version": 0,
 	"dependencies": [
 		{
+			"importpath": "github.com/cenkalti/backoff",
+			"repository": "https://github.com/cenkalti/backoff",
+			"revision": "4b4cebaf850ec58f1bb1fec5bdebdf8501c2bc3f",
+			"branch": "v3"
+		},
+		{
+			"importpath": "github.com/dghubble/go-twitter/twitter",
+			"repository": "https://github.com/dghubble/go-twitter",
+			"revision": "53f972dc4b060ca0107e36a9b118d88c97d816e5",
+			"branch": "master",
+			"path": "/twitter"
+		},
+		{
+			"importpath": "github.com/dghubble/oauth1",
+			"repository": "https://github.com/dghubble/oauth1",
+			"revision": "f9f59e0181d588c47e6af9dd5c277dcaaa9e786a",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/dghubble/sling",
+			"repository": "https://github.com/dghubble/sling",
+			"revision": "22538d0bac4e8b6337114fccfdfeb6d1ad0ef2d2",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/google/go-querystring/query",
+			"repository": "https://github.com/google/go-querystring",
+			"revision": "c8c88dbee036db4e4808d1f2ec8c2e15e11c3f80",
+			"branch": "master",
+			"path": "/query"
+		},
+		{
 			"importpath": "github.com/technoweenie/multipartstreamer",
 			"repository": "https://github.com/technoweenie/multipartstreamer",
 			"revision": "a90a01d73ae432e2611d178c18367fbaa13e0154",
