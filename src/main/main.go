@@ -9,9 +9,6 @@ import (
 	"os"
 )
 
-
-
-
 var port = os.Getenv("PORT")
 var cKey = os.Getenv("cKey")
 var cSecret = os.Getenv("cSecret")
